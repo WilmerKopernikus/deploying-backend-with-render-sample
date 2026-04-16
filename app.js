@@ -55,6 +55,32 @@ app.get('/api/activities', async (req, res) => {
   }
 });
 
+app.delete('/api/activities/:id', async (req, res) => {
+  const id = Number.parseInt(req.params.id, 10);
+
+  if (!Number.isInteger(id) || id <= 0) {
+    return res.status(400).json({ status: 'error', message: 'A valid activity id is required.' });
+  }
+
+  try {
+    const client = await pool.connect();
+    const deleteResult = await client.query('DELETE FROM my_activities WHERE id = $1 RETURNING id, activity', [id]);
+    client.release();
+
+    if (deleteResult.rowCount === 0) {
+      return res.status(404).json({ status: 'error', message: `Activity with id ${id} not found.` });
+    }
+
+    return res.json({
+      status: 'success',
+      message: `Activity ${id} deleted successfully.`,
+      activity: deleteResult.rows[0],
+    });
+  } catch (error) {
+    return res.status(500).json({ status: 'error', message: error.message });
+  }
+});
+
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok' });
 });
