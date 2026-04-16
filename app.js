@@ -1,9 +1,8 @@
 const express = require('express');
 const path = require('path');
-const app = express();
 const { Pool } = require('pg');
-const fetch = require('node-fetch');
 
+const app = express();
 const PORT = process.env.PORT || 3000;
 const DATABASE_URL = process.env.DATABASE_URL;
 
@@ -12,40 +11,31 @@ const pool = new Pool({
   connectionString: DATABASE_URL,
 });
 
-// Bored API base URL
-const BORED_API_BASE_URL = 'https://www.boredapi.com/api/';
-
+app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-async function getRandomActivity() {
-  try {
-    const response = await fetch(BORED_API_BASE_URL + 'activity');
-    if (response.ok) {
-      const data = await response.json();
-      return data.activity;
-    }
+app.post('/api/activities', async (req, res) => {
+  const activity = typeof req.body.activity === 'string' ? req.body.activity.trim() : '';
 
-    return null;
-  } catch (error) {
-    return null;
+  if (!activity) {
+    return res.status(400).json({ status: 'error', message: 'Activity is required.' });
   }
-}
 
-app.get('/api/insert_activity', async (req, res) => {
   try {
     const client = await pool.connect();
-    const activityName = await getRandomActivity();
+    const insertResult = await client.query(
+      'INSERT INTO my_activities (activity) VALUES ($1) RETURNING id, activity',
+      [activity],
+    );
+    client.release();
 
-    if (activityName) {
-      await client.query('INSERT INTO my_activities (activity) VALUES ($1)', [activityName]);
-      client.release();
-      res.status(200).json({ status: 'success', message: `Activity "${activityName}" inserted successfully` });
-    } else {
-      client.release();
-      res.status(400).json({ status: 'error', message: 'Unable to generate an activity from BoredAPI' });
-    }
+    return res.status(201).json({
+      status: 'success',
+      message: `Activity "${activity}" inserted successfully`,
+      activity: insertResult.rows[0],
+    });
   } catch (error) {
-    res.status(500).json({ status: 'error', message: error.message });
+    return res.status(500).json({ status: 'error', message: error.message });
   }
 });
 
@@ -53,16 +43,15 @@ app.get('/api/activities', async (req, res) => {
   try {
     const client = await pool.connect();
 
-    const countResult = await client.query('SELECT COUNT(*) FROM my_activities');
-    const count = countResult.rows[0].count;
-
-    const activitiesResult = await client.query('SELECT activity FROM my_activities ORDER BY id DESC');
-    const activityNames = activitiesResult.rows.map((row) => row.activity);
-
+    const activitiesResult = await client.query('SELECT id, activity FROM my_activities ORDER BY id DESC');
     client.release();
-    res.json({ activity_count: count, activities: activityNames });
+
+    return res.json({
+      activity_count: activitiesResult.rowCount,
+      activities: activitiesResult.rows,
+    });
   } catch (error) {
-    res.status(500).json({ status: 'error', message: error.message });
+    return res.status(500).json({ status: 'error', message: error.message });
   }
 });
 
