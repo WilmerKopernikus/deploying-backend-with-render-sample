@@ -17,7 +17,7 @@ function renderActivities(data) {
   if (!Array.isArray(data.activities) || data.activities.length === 0) {
     const row = document.createElement('tr');
     const cell = document.createElement('td');
-    cell.colSpan = 2;
+    cell.colSpan = 3;
     cell.className = 'empty';
     cell.textContent = 'No activities saved yet.';
     row.appendChild(cell);
@@ -25,7 +25,9 @@ function renderActivities(data) {
     return;
   }
 
-  data.activities.forEach((entry) => {
+  [...data.activities]
+    .sort((a, b) => b.id - a.id)
+    .forEach((entry) => {
     const row = document.createElement('tr');
 
     const idCell = document.createElement('td');
@@ -34,10 +36,19 @@ function renderActivities(data) {
     const activityCell = document.createElement('td');
     activityCell.textContent = entry.activity;
 
+    const actionsCell = document.createElement('td');
+    const deleteBtn = document.createElement('button');
+    deleteBtn.type = 'button';
+    deleteBtn.className = 'danger';
+    deleteBtn.textContent = 'Delete';
+    deleteBtn.addEventListener('click', () => deleteActivity(entry.id));
+    actionsCell.appendChild(deleteBtn);
+
     row.appendChild(idCell);
     row.appendChild(activityCell);
+    row.appendChild(actionsCell);
     activitiesBody.appendChild(row);
-  });
+    });
 }
 
 async function fetchActivities() {
@@ -87,6 +98,25 @@ async function saveActivity() {
     setStatus(error.message, true);
   } finally {
     saveBtn.disabled = false;
+  }
+}
+
+async function deleteActivity(id) {
+  try {
+    setStatus(`Deleting activity ${id}...`);
+    const response = await fetch(`/api/activities/${id}`, {
+      method: 'DELETE',
+    });
+    const payload = await response.json();
+
+    if (!response.ok) {
+      throw new Error(payload.message || `Failed to delete activity ${id}.`);
+    }
+
+    setStatus(payload.message);
+    await fetchActivities();
+  } catch (error) {
+    setStatus(error.message, true);
   }
 }
 
