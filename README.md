@@ -28,6 +28,6 @@ You're free to make changes on your own branch, but for the sake of consistency,
 
 ## API endpoints
 
-- `GET /api/activities`: list saved activities and total count.
-- `GET /api/insert_activity`: generate one random activity and persist it.
+- `GET /api/activities`: list saved activities (`id`, `activity`) and total count.
+- `POST /api/activities`: insert an activity. Request body: `{ "activity": "Read 10 pages" }`.
 - `GET /health`: health check.

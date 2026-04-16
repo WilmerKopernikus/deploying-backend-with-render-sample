@@ -3,16 +3,17 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Activity Generator</title>
+    <title>Activity Tracker</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
     <main class="container">
-      <h1>Activity Generator</h1>
-      <p class="subtitle">Generate random activities and save them to your database.</p>
+      <h1>Activity Tracker</h1>
+      <p class="subtitle">Type an activity and save it to your database.</p>
 
       <section class="actions">
-        <button id="generate-btn">Generate & Save Activity</button>
+        <input id="activity-input" type="text" placeholder="e.g. Read 10 pages" maxlength="255" />
+        <button id="save-btn">Save Activity</button>
         <button id="refresh-btn" class="secondary">Refresh List</button>
       </section>
 
@@ -20,7 +21,15 @@
 
       <section class="results">
         <h2>Saved Activities (<span id="count">0</span>)</h2>
-        <ul id="activities-list"></ul>
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Activity</th>
+            </tr>
+          </thead>
+          <tbody id="activities-body"></tbody>
+        </table>
       </section>
     </main>
 
