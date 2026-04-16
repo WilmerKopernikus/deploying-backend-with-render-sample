@@ -1,4 +1,5 @@
 const express = require('express');
+const path = require('path');
 const app = express();
 const { Pool } = require('pg');
 const fetch = require('node-fetch');
@@ -14,21 +15,23 @@ const pool = new Pool({
 // Bored API base URL
 const BORED_API_BASE_URL = 'https://www.boredapi.com/api/';
 
+app.use(express.static(path.join(__dirname, 'public')));
+
 async function getRandomActivity() {
   try {
     const response = await fetch(BORED_API_BASE_URL + 'activity');
     if (response.ok) {
       const data = await response.json();
       return data.activity;
-    } else {
-      return null;
     }
+
+    return null;
   } catch (error) {
     return null;
   }
 }
 
-app.get('/insert_activity', async (req, res) => {
+app.get('/api/insert_activity', async (req, res) => {
   try {
     const client = await pool.connect();
     const activityName = await getRandomActivity();
@@ -38,6 +41,7 @@ app.get('/insert_activity', async (req, res) => {
       client.release();
       res.status(200).json({ status: 'success', message: `Activity "${activityName}" inserted successfully` });
     } else {
+      client.release();
       res.status(400).json({ status: 'error', message: 'Unable to generate an activity from BoredAPI' });
     }
   } catch (error) {
@@ -45,21 +49,29 @@ app.get('/insert_activity', async (req, res) => {
   }
 });
 
-app.get('/', async (req, res) => {
+app.get('/api/activities', async (req, res) => {
   try {
     const client = await pool.connect();
 
     const countResult = await client.query('SELECT COUNT(*) FROM my_activities');
     const count = countResult.rows[0].count;
 
-    const activitiesResult = await client.query('SELECT activity FROM my_activities');
-    const activityNames = activitiesResult.rows.map(row => row.activity);
+    const activitiesResult = await client.query('SELECT activity FROM my_activities ORDER BY id DESC');
+    const activityNames = activitiesResult.rows.map((row) => row.activity);
 
     client.release();
     res.json({ activity_count: count, activities: activityNames });
   } catch (error) {
     res.status(500).json({ status: 'error', message: error.message });
   }
+});
+
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok' });
+});
+
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 app.listen(PORT, () => {
